@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Room</title>
+</head>
+<body>
+    <h1>Room Code: {{ room_code }}</h1>
+    <script>
+    const roomCode = "{{ room_code }}";
+    const chatSocket = new WebSocket(
+        (window.location.protocol === 'https:' ? 'wss://' : 'ws://')
+        + window.location.host + '/ws/chat/' + roomCode + '/'
+    );
+    </script>
+
+</body>
+</html>

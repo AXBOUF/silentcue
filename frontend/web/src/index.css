@@ -1,0 +1,57 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f5f1e8;
+  --foreground: #17221f;
+  --primary: #d85a38;
+  --primary-foreground: #fff9ef;
+  --secondary: #e7e1d5;
+  --accent: #d8d0c0;
+  --muted: #c7c0b4;
+  --muted-foreground: #68706a;
+  --input: #17221f;
+  --meter: #a9a293;
+  --forest: #244d43;
+  --ochre: #e1ad44;
+  --status: #5d9b67;
+
+  --font-sans: "Avenir Next", "Segoe UI", sans-serif;
+  --font-mono: "SFMono-Regular", Consolas, monospace;
+
+  font: 18px/145% var(--font-sans);
+  letter-spacing: 0.18px;
+  color-scheme: light;
+  color: var(--foreground);
+  background: var(--background);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  @media (max-width: 1024px) {
+    font-size: 16px;
+  }
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  background: var(--background);
+}
+
+.receiver-signal-primary {
+  color: var(--primary);
+}
+
+.receiver-signal-forest {
+  color: var(--forest);
+}
+
+.receiver-signal-ochre {
+  color: var(--ochre);
+}
+
+#root {
+  min-height: 100svh;
+}
+

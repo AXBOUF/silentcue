@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Room {{ room_code }}</title>
+</head>
+<body>
+    <h1>Room Code: {{ room_code }}</h1>
+    <div>
+        <label for="name-input">Your name:</label>
+        <input type="text" id="name-input" placeholder="Enter your name" value="{{ is_root|yesno:'Root,Guest' }}">
+        <button id="save-name">Save Name</button>
+    </div>
+    <p id="status">Waiting for the other side to join...</p>
+    <div>
+        <button id="btn-next" disabled>NEXT</button>
+        <button id="btn-back" disabled>BACK</button>
+    </div>
+    <div id="current-state">No response yet.</div>
+    <button id="leave-room">Leave Room</button>
+    <script type="text/javascript">
+        const roomCode = "{{ room_code }}";
+        const role = "{{ is_root|yesno:'root,user' }}";
+        const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+        const controllerToken = "{{ controller_token }}";
+        const tokenQuery = role === 'root' ? `&token=${encodeURIComponent(controllerToken)}` : '';
+        const chatSocket = new WebSocket(`${protocol}${window.location.host}/ws/chat/${roomCode}/?role=${role}${tokenQuery}`);
+
+        const statusEl = document.getElementById('status');
+        const stateEl = document.getElementById('current-state');
+        const nextBtn = document.getElementById('btn-next');
+        const backBtn = document.getElementById('btn-back');
+        const nameInput = document.getElementById('name-input');
+        let myName = nameInput.value.trim();
+
+        document.getElementById('save-name').addEventListener('click', () => {
+            myName = nameInput.value.trim() || myName;
+        });
+
+        function setButtonsEnabled(enabled) {
+            const canSend = enabled && role === 'root';
+            nextBtn.disabled = !canSend;
+            backBtn.disabled = !canSend;
+        }
+
+        function setCurrentState(text) {
+            stateEl.textContent = text;
+        }
+
+        chatSocket.onclose = function(e) {
+            statusEl.textContent = 'Connection closed.';
+            setButtonsEnabled(false);
+        }
+
+        chatSocket.onmessage = function(e) {
+            const data = JSON.parse(e.data);
+
+            if (data.type === 'peer_status') {
+                if (data.connected) {
+                    statusEl.textContent = 'Both sides connected.';
+                    setButtonsEnabled(true);
+                } else {
+                    statusEl.textContent = 'Waiting for the other side to join...';
+                    setButtonsEnabled(false);
+                }
+            } else if (data.type === 'signal') {
+                setCurrentState(`${data.name}: ${data.value.toUpperCase()}`);
+            } else if (data.type === 'room_dismantled') {
+                alert('The room owner left. This room has been closed.');
+                chatSocket.close();
+                window.location.href = '/';
+            }
+        };
+
+        function sendSignal(value) {
+            chatSocket.send(JSON.stringify({ value: value, name: myName, role }));
+        }
+
+        nextBtn.addEventListener('click', () => sendSignal('next'));
+        backBtn.addEventListener('click', () => sendSignal('back'));
+
+        document.getElementById('leave-room').addEventListener('click', () => {
+            chatSocket.close();
+            window.location.href = '/';
+        });
+    </script>
+</body>
+</html>
+
