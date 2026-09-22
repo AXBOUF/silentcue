@@ -13,17 +13,35 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
-const COMMANDS = [
-  { name: "BACK", value: "back" },
-  { name: "NEXT", value: "next" },
-];
+// have additional selection commands right now 
+const COMMANDS = {
+  presentation: [
+    { name: "BACK", value: 0 },
+    { name: "NEXT", value: 1 },
+  ],
+  film_shooting: [
+    { name: "STOP", value: 0 },
+    { name: "START", value: 1 },
+  ],
+  YES_NO: [
+    { name: "NO", value: 0 },
+    { name: "YES", value: 1 },
+  ]
+};
+
+const MODE_LABELS = {
+  presentation: "Presentation",
+  film_shooting: "Film shooting",
+  YES_NO: "Yes / no",
+  custom: "Custom",
+};
 
 function Brand() {
   return (
     <div className="flex items-center gap-3">
       <span className="grid size-9 place-items-center border border-foreground bg-primary text-primary-foreground">
       </span>
-      <span className="text-xl font-black uppercase tracking-normal">Relay</span>
+      <span className="text-xl font-black uppercase tracking-normal">Silentcue</span>
     </div>
   );
 }
@@ -39,7 +57,16 @@ export function RelayApp() {
   const [lastSignal, setLastSignal] = useState(null);
   const [signalCount, setSignalCount] = useState(0);
   const [copied, setCopied] = useState(false);
+  const [sessionWarning, setSessionWarning] = useState(null);
+  const [mode, setMode] = useState("presentation");
+  const [modeMenuOpen, setModeMenuOpen] = useState(false);
+  const [customCommands, setCustomCommands] = useState([
+    { name: "CUSTOM", value: 0 },
+    { name: "CUSTOM", value: 1 },
+  ]);
   const socketRef = useRef(null);
+
+  const activeCommands = mode === "custom" ? customCommands : COMMANDS[mode];
 
   const receiveSignal = useCallback((signal) => {
     setLastSignal(signal);
@@ -50,6 +77,7 @@ export function RelayApp() {
     if (screen !== "room" || !roomCode) return;
     setConnected(false);
     setDeviceCount(1);
+    setSessionWarning(null);
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const socketRole = role === "controller" ? "root" : "user";
     const tokenQuery = role === "controller" ? `&token=${encodeURIComponent(controllerToken)}` : "";
@@ -61,9 +89,16 @@ export function RelayApp() {
         if (message.type === "peer_status") {
           setConnected(Boolean(message.connected));
           setDeviceCount(message.connected ? 2 : 1);
-        } else if (message.type === "signal" && message.name && message.value) {
+        } else if (
+          message.type === "signal" &&
+          message.name &&
+          (message.value === 0 || message.value === 1)
+        ) {
           receiveSignal({ name: message.name, value: message.value });
+        } else if (message.type === "session_warning") {
+          setSessionWarning(message.remaining_seconds);
         } else if (message.type === "room_dismantled") {
+          setSessionWarning(null);
           setScreen("home");
           setRoomCode("");
         }
@@ -73,7 +108,13 @@ export function RelayApp() {
     };
     socket.onclose = () => setConnected(false);
     socket.onerror = () => setConnected(false);
+    const heartbeat = window.setInterval(() => {
+      if (socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: "heartbeat" }));
+      }
+    }, 30000);
     return () => {
+      window.clearInterval(heartbeat);
       socket.close();
       socketRef.current = null;
     };
@@ -108,6 +149,13 @@ export function RelayApp() {
     }
   }
 
+  function updateCustomCommand(index, name) {
+    const singleWord = name.trim().split(/\s+/)[0] || "";
+    setCustomCommands((commands) => commands.map((command, commandIndex) => (
+      commandIndex === index ? { ...command, name: singleWord.toUpperCase() || `CUSTOM ${command.value}` } : command
+    )));
+  }
+
   async function copyCode() {
     await navigator.clipboard.writeText(roomCode);
     setCopied(true);
@@ -123,21 +171,23 @@ export function RelayApp() {
 
   if (screen === "home") {
     return (
-      <main className="min-h-screen bg-background text-foreground">
+      <main className="min-h-screen bg-primary text-foreground">
         <header className="flex h-20 items-center justify-between border-b border-foreground px-5 md:px-10">
           <Brand />
         </header>
 
-        <section className="mx-auto grid min-h-[calc(100vh-5rem)] max-w-[1440px] grid-cols-1 lg:grid-cols-[1fr_0.78fr]">
+        <section className="grid min-h-[calc(100dvh-5rem)] w-full grid-cols-1">
 
-          <div className="grid border-t border-foreground lg:border-t-0">
+          <div className="grid w-full border-t border-foreground lg:border-t-0">
             <button
               type="button"
-              className="group flex min-h-72 cursor-pointer flex-col justify-between border-b border-foreground bg-primary p-7 text-left text-primary-foreground transition-colors hover:bg-forest md:p-10"
+              className="group flex min-h-[clamp(280px,45dvh,620px)] cursor-pointer flex-col justify-between border-b border-foreground bg-[#dc5543] p-7 text-left text-white transition-colors hover:bg-[#c44738] md:p-10"
               onClick={() => createRoom().catch((error) => window.alert(error.message))}
             >
               <span className="flex items-end justify-between gap-4">
-                <span className="text-5xl font-black uppercase leading-none md:text-7xl">Create<br />Room</span>
+              <span className="text-[clamp(3rem,8vw,7rem)] font-black uppercase leading-none">
+                Create<br />Room
+              </span>
                 <span className="grid size-16 shrink-0 place-items-center rounded-full border border-current transition-transform group-hover:rotate-[-45deg]">
                   <CornerDownRight className="size-7" />
                 </span>
@@ -192,7 +242,7 @@ export function RelayApp() {
             <span className="font-mono text-2xl font-black tracking-[0.18em]">{roomCode}</span>
           </div>
           <Button variant="outline" className="h-10 rounded-none border-foreground bg-transparent shadow-none" onClick={copyCode}>
-            {copied ? <Check /> : <Clipboard />} {copied ? "Copied" : "Copy code"}
+            {copied ? <Check /> : <Clipboard />} {copied ? "" : ""}
           </Button>
         </div>
         <div className="order-2 flex items-center gap-4 md:order-3">
@@ -206,6 +256,12 @@ export function RelayApp() {
 
       <div className="grid flex-1 grid-cols-1 lg:grid-cols-[260px_1fr]">
 
+        {sessionWarning !== null && (
+          <div className="col-span-full border-b border-foreground bg-accent px-4 py-3 text-center font-mono text-xs font-bold uppercase">
+            Room expires in {Math.max(1, Math.ceil(sessionWarning / 60))} minutes
+          </div>
+        )}
+
           <div className="hidden p-5 lg:block">
               <Button variant="ghost" onClick={leaveRoom} className="w-full justify-start rounded-none px-0 text-destructive hover:bg-transparent">
                 <LogOut /> Leave room
@@ -213,8 +269,53 @@ export function RelayApp() {
           </div>
         {role === "controller" ? (
           <section className="flex min-h-[620px] flex-col p-4 md:p-8">
+            <div className="relative z-20 mb-4 w-full max-w-sm">
+              <button
+                type="button"
+                aria-expanded={modeMenuOpen}
+                aria-haspopup="listbox"
+                onClick={() => setModeMenuOpen((open) => !open)}
+                className="flex w-full items-center justify-between border border-foreground bg-background px-3 py-2 text-left font-mono text-sm uppercase"
+              >
+                {MODE_LABELS[mode]}
+                <ArrowRight className={cn("size-4 transition-transform", modeMenuOpen && "rotate-90")} />
+              </button>
+              {modeMenuOpen && (
+                <div role="listbox" aria-label="Command mode" className="absolute left-0 top-full max-h-52 w-full overflow-y-auto border-x border-b border-foreground bg-background shadow-lg">
+                  {Object.entries(MODE_LABELS).map(([value, label]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      role="option"
+                      aria-selected={mode === value}
+                      onClick={() => {
+                        setMode(value);
+                        setModeMenuOpen(false);
+                      }}
+                      className={cn("block w-full px-3 py-3 text-left font-mono text-sm uppercase hover:bg-accent", mode === value && "bg-secondary")}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            {mode === "custom" && (
+              <div className="mb-4 grid gap-3 md:grid-cols-2">
+                {customCommands.map((command, index) => (
+                  <Input
+                    key={command.value}
+                    value={command.name}
+                    maxLength={20}
+                    aria-label={`Custom command ${command.value}`}
+                    onChange={(event) => updateCustomCommand(index, event.target.value)}
+                    className="rounded-none border-foreground bg-transparent font-mono uppercase"
+                  />
+                ))}
+              </div>
+            )}
             <div className="grid flex-1 gap-3 md:grid-cols-2">
-              {COMMANDS.map((command, index) => (
+              {activeCommands.map((command, index) => (
                 <Button
                   key={command.value}
                   onClick={() => sendSignal(command)}

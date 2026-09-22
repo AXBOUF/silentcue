@@ -58,6 +58,7 @@ def join_room(request, room_code=None):
 
 
 def room(request, room_code):
+    purge_expired_rooms()
     try:
         room = ChatRoom.objects.get(code=room_code, is_active=True)
     except ChatRoom.DoesNotExist:

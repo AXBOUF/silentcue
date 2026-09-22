@@ -6,6 +6,8 @@ from datetime import timedelta
 from django.utils import timezone
 
 ROOM_RETENTION = timedelta(hours=1)
+ROOM_MAX_LIFETIME = ROOM_RETENTION
+ROOM_EXPIRY_WARNING = timedelta(minutes=5)
 
 
 def generate_room_code():

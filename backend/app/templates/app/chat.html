@@ -65,7 +65,7 @@
                     setButtonsEnabled(false);
                 }
             } else if (data.type === 'signal') {
-                setCurrentState(`${data.name}: ${data.value.toUpperCase()}`);
+                setCurrentState(`${data.name}: ${data.value}`);
             } else if (data.type === 'room_dismantled') {
                 alert('The room owner left. This room has been closed.');
                 chatSocket.close();
@@ -77,8 +77,8 @@
             chatSocket.send(JSON.stringify({ value: value, name: myName, role }));
         }
 
-        nextBtn.addEventListener('click', () => sendSignal('next'));
-        backBtn.addEventListener('click', () => sendSignal('back'));
+        nextBtn.addEventListener('click', () => sendSignal(1));
+        backBtn.addEventListener('click', () => sendSignal(0));
 
         document.getElementById('leave-room').addEventListener('click', () => {
             chatSocket.close();
