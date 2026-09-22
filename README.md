@@ -86,6 +86,8 @@ docs/           Project notes and design references
 
 ```bash
 cd /home/runner/work/silentcue/silentcue/backend
+uv sync
+uv run manage.py migrate
 uv run manage.py runserver 127.0.0.1:8000
 ```
 
