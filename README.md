@@ -85,8 +85,9 @@ docs/           Project notes and design references
 ### Backend
 
 ```bash
-cd /home/runner/work/silentcue/silentcue/backend
+cd silentcue
 uv sync
+cd backend
 uv run manage.py migrate
 uv run manage.py runserver 127.0.0.1:8000
 ```
@@ -94,7 +95,7 @@ uv run manage.py runserver 127.0.0.1:8000
 ### Frontend
 
 ```bash
-cd /home/runner/work/silentcue/silentcue/frontend/web
+cd silentcue/frontend/web
 npm install
 npm run dev
 ```
