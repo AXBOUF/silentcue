@@ -88,9 +88,8 @@ From the repository root:
 
 ```bash
 uv sync
-cd backend
-uv run manage.py migrate
-uv run manage.py runserver 127.0.0.1:8000
+uv run backend/manage.py migrate
+uv run backend/manage.py runserver 127.0.0.1:8000
 ```
 
 ### Frontend
